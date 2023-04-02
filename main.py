@@ -1,14 +1,9 @@
-import os
-import lightbulb
+import os  # For retrieving environment variables
+import lightbulb  # For creating the Discord bot instance
 
-# The ID of the default guild for the bot
-DEFAULT_GUILDS = "986235093569916948"
-
-# Create a new bot app instance with the specified token, default guilds, and logging level
 bot = lightbulb.BotApp(
-    token=os.getenv("DISCORDBOTTOKEN"), # Retrieve the Discord bot token from an environment variable
-    default_enabled_guilds=(DEFAULT_GUILDS), # Set the default guild(s) for the bot
-    logs="DEBUG" # Set the logging level to debug for verbose output
+    token=os.getenv("DISCORDBOTTOKEN"), # Retrieve the Discord bot token
+    logs="DEBUG" # Set the logging level to debug
 )
 
 # Load all extensions from the "./extensions" directory
