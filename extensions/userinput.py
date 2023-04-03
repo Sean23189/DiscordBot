@@ -10,22 +10,22 @@ plugin = lightbulb.Plugin("userinput")
 @lightbulb.implements(lightbulb.SlashCommand)
 async def store_input(ctx: lightbulb.Context):
     # Get the username and discriminator of the user who invoked the command
-    username = ctx.author.username
-    discriminator = ctx.author.discriminator
+    # Set variable fullname to the username + discriminator (ex. Test#1234)
+    fullname = ctx.author.username + "#" + ctx.author.discriminator
 
     # Get the 'input_text' option passed in by the user
     input_text = ctx.options.input_text
 
     # Write the username, discriminator, and input text to a file
     with open("userinput.txt", "a", encoding="utf-8") as file:
-        file.write(f"{username}#{discriminator}: {input_text}\n")
+        file.write(f"{fullname}: {input_text}\n")
 
     # Get the line number of the newly added message
     with open("userinput.txt", "r", encoding="utf-8") as file:
         line_number = len(file.readlines())
 
     # Respond to the user to confirm that their message was stored
-    await ctx.respond(f"Stored message '{input_text}' for user {username}#{discriminator} on line {line_number}.")
+    await ctx.respond(f"Stored message '{input_text}' for user {fullname} on line {line_number}.")
 
 # Define a command called 'searchinput' which takes an argument called 'search'
 @plugin.command

@@ -45,7 +45,7 @@ async def get_cmd(ctx: lightbulb.Context):
         quote = get_quote()
         await ctx.respond(content=quote)
     elif ctx.options.get == "username":
-        # If the value is "username", format the username of the user who sent the command and respond with it
+        # If the value is "username", format the username and respond
         username = f"{ctx.author.username}#{ctx.author.discriminator}"
         await ctx.respond(content=username)
 
