@@ -12,7 +12,7 @@ plugin = lightbulb.Plugin('google')
 # function that takes a search query and returns the top search result
 def get_top_result(query: str) -> str:
     url = f'https://www.googleapis.com/customsearch/v1?key={API_KEY}&cx={CX}&q={query}'
-    # add timeout of 5 seconds to requests.get to prevent the program from hanging indefinitely
+    # add timeout of 5 seconds to requests.get
     response = requests.get(url, timeout=5)
     json_data = response.json()
     top_result = json_data['items'][0]['title'] + '\n' + json_data['items'][0]['link']
