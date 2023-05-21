@@ -1,58 +1,49 @@
 import os
-import aiohttp
 import asyncio
-import json
+import aiohttp
 import wolframalpha
 import lightbulb
 
-API_KEYS = {
-    'GOOGLEAPIKEY': os.getenv('GOOGLEAPIKEY'),
-    'CUSTOMSEARCHENGINEID': os.getenv('CUSTOMSEARCHENGINEID'),
-    'WOLFRAMAPIKEY': os.getenv('WOLFRAMAPIKEY'),
-    'RAPIDAPIKEY': os.getenv('RAPIDAPIKEY'),
-}
+GOOGLEAPIKEY = os.getenv('GOOGLEAPIKEY')
+CUSTOMSEARCHENGINEID = os.getenv('CUSTOMSEARCHENGINEID')
+WOLFRAMAPIKEY = os.getenv('WOLFRAMAPIKEY')
+RAPIDAPIKEY = os.getenv('RAPIDAPIKEY')
 
 plugin = lightbulb.Plugin('ask')
 
-
-# Function to create a Wolfram Alpha API client
-def get_wolfram_api_client():
-    return wolframalpha.Client(API_KEYS['WOLFRAMAPIKEY'])
-
-
-# Function to make a call to the Wolfram Alpha API
 async def call_wolfram_api(query):
-    client = get_wolfram_api_client()
+    client = wolframalpha.Client(WOLFRAMAPIKEY)
     try:
-        result = await loop.run_in_executor(None, client.query, query)
-        return next(result.results).text
+        result = await asyncio.wait_for(client.query(query), timeout=10)
+        response = next(result.results).text
+        return response
     except StopIteration:
         return "No results found."
-    except Exception as e:
-        return f"Error occurred during Wolfram Alpha API call: {str(e)}"
+    except Exception as _:
+        return "Error occurred during Wolfram Alpha API call."
 
-
-# Function to get the top search result from Google Custom Search API
 async def get_top_result(query: str):
-    url = f'https://www.googleapis.com/customsearch/v1?key={API_KEYS["GOOGLEAPIKEY"]}&cx={API_KEYS["CUSTOMSEARCHENGINEID"]}&q={query}'
+    url = (
+        f'https://www.googleapis.com/customsearch/v1'
+        f'?key={GOOGLEAPIKEY}&cx={CUSTOMSEARCHENGINEID}'
+        f'&q={query}'
+    )
 
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.get(url, timeout=5) as response:
+            async with session.get(url) as response:
                 json_data = await response.json()
                 if 'items' in json_data and len(json_data['items']) > 0:
                     return json_data['items'][0]['title'] + '\n' + json_data['items'][0]['link']
                 else:
                     return "No results found."
-        except aiohttp.ClientError as e:
-            return f"Error occurred during Google API call: {str(e)}"
+        except aiohttp.ClientError as _:
+            return "Error occurred during Google API call."
 
-
-# Function to get the definition and example from Urban Dictionary API
 async def get_urban_dictionary_results(query):
     url = "https://mashape-community-urban-dictionary.p.rapidapi.com/define"
     headers = {
-        "X-RapidAPI-Key": API_KEYS["RAPIDAPIKEY"],
+        "X-RapidAPI-Key": RAPIDAPIKEY,
         "X-RapidAPI-Host": "mashape-community-urban-dictionary.p.rapidapi.com"
     }
     params = {"term": query}
@@ -63,36 +54,41 @@ async def get_urban_dictionary_results(query):
                 data = await response.json()
                 if 'list' in data and len(data['list']) > 0:
                     first_result = data['list'][0]
-                    definition = first_result['definition'].replace("[", "").replace("]", "").strip()
-                    example = first_result['example'].replace("[", "").replace("]", "").strip()
+                    definition = (
+                        first_result['definition']
+                        .replace("[", "")
+                        .replace("]", "")
+                        .strip()
+                    )
+                    example = (
+                        first_result['example']
+                        .replace("[", "")
+                        .replace("]", "")
+                        .strip()
+                    )
                     return definition, example
-        except aiohttp.ClientError as e:
-            print(f"Error occurred during Urban Dictionary API call: {str(e)}")
+        except aiohttp.ClientError as _:
+            pass
 
     return None, None
 
-
-# Function to fetch results from Wolfram Alpha, Google, and Urban Dictionary APIs
 async def fetch_results(query):
+    wolfram_response = await call_wolfram_api(query)
     tasks = [
-        call_wolfram_api(query),
         get_top_result(query),
         get_urban_dictionary_results(query),
     ]
     try:
         results = await asyncio.gather(*tasks)
-        wolfram_response, google_result, (urban_definition, urban_example) = results
-        return wolfram_response, google_result, urban_definition, urban_example
-    except Exception as e:
-        print(f"Error occurred during API calls: {str(e)}")
+        google_result, (urban_definition, urban_example) = results
+    except Exception as _:
+        raise RuntimeError("An error occurred during API requests.")
 
-    return None, None, None, None
+    return wolfram_response, google_result, urban_definition, urban_example
 
-
-# Command to ask a question and fetch results
 @plugin.command
 @lightbulb.option('query', 'search query', type=str)
-@lightbulb.command('ask', 'Ask about anything')
+@lightbulb.command('ask', 'Ask about anything', auto_defer=True)
 @lightbulb.implements(lightbulb.SlashCommand)
 async def ask_cmd(ctx: lightbulb.Context):
     query = ctx.options.query
@@ -100,19 +96,29 @@ async def ask_cmd(ctx: lightbulb.Context):
         await ctx.respond(content="Please provide a search query.")
         return
 
-    wolfram_response, google_result, urban_definition, urban_example = await fetch_results(query)
-
-    if wolfram_response is None or google_result is None:
-        await ctx.respond(content="An error occurred during API calls.")
+    try:
+        results = await asyncio.wait_for(fetch_results(query), timeout=10)
+        wolfram_response, google_result, urban_definition, urban_example = results
+    except asyncio.TimeoutError:
+        await ctx.respond(content="API request timed out.")
+        return
+    except RuntimeError as error:
+        await ctx.respond(content=str(error))
+        return
+    except Exception as _:
+        await ctx.respond(content="An unexpected error occurred.")
         return
 
     message = f"Here are your results using the query '{query}':\n\n"
-
     message += f"**WolframAlpha:**\n{wolfram_response}\n\n"
     message += f"**Google:**\n{google_result}\n\n"
 
     if urban_definition and urban_example:
-        message += f"**Urban Dictionary:**\nDefinition: {urban_definition}\nExample: {urban_example}"
+        message += (
+            f"**Urban Dictionary:**\n"
+            f"Definition: {urban_definition}\n"
+            f"Example: {urban_example}"
+        )
     else:
         message += "**Urban Dictionary:**\nNo definition found."
 
@@ -121,11 +127,7 @@ async def ask_cmd(ctx: lightbulb.Context):
     else:
         await ctx.respond(content="The response message exceeds the character limit.")
 
-
-# Function to load the plugin
 def load(bot):
     bot.add_plugin(plugin)
 
-
 loop = asyncio.get_event_loop()
-
