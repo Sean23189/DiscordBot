@@ -10,11 +10,10 @@ async def command_list_cmd(ctx: lightbulb.Context):
     # Command to list all available commands for the bot.
 
     command_list = [
-        "/google",
-        "/wolfram",
         "/profiles",
         "/userinput",
         "/get"
+        "/ask"
     ]
     
     response = "Available commands:\n" + "\n".join(command_list)
