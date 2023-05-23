@@ -2,3 +2,9 @@ __pycache__
 userinput.db
 poetry.lock
 pyproject.toml
+venv
+.config
+.git
+.replit
+replit.nix
+.upm
