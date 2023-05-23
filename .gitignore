@@ -1,2 +1,10 @@
 __pycache__
 userinput.db
+venv
+.replit
+replit.nix
+.config
+.git
+.upm
+poetry.lock
+pyproject.toml
