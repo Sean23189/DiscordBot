@@ -1,2 +1,4 @@
 __pycache__
 userinput.db
+poetry.lock
+pyproject.toml
