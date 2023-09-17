@@ -4,23 +4,18 @@ import aiohttp
 import wolframalpha
 import lightbulb
 
-GOOGLEAPIKEY = os.getenv('GOOGLEAPIKEY')
-CUSTOMSEARCHENGINEID = os.getenv('CUSTOMSEARCHENGINEID')
-WOLFRAMAPIKEY = os.getenv('WOLFRAMAPIKEY')
-RAPIDAPIKEY = os.getenv('RAPIDAPIKEY')
+GOOGLEAPIKEY = os.environ['GOOGLEAPIKEY']
+CUSTOMSEARCHENGINEID = os.environ['CUSTOMSEARCHENGINEID']
+WOLFRAMAPIKEY = os.environ['WOLFRAMAPIKEY']
+RAPIDAPIKEY = os.environ['RAPIDAPIKEY']
 
 plugin = lightbulb.Plugin('ask')
 
-async def call_wolfram_api(query):
-    client = wolframalpha.Client(WOLFRAMAPIKEY)
-    try:
-        result = await asyncio.wait_for(client.query(query), timeout=10)
-        response = next(result.results).text
-        return response
-    except StopIteration:
-        return "No results found."
-    except Exception as _:
-        return "Error occurred during Wolfram Alpha API call."
+def call_wolfram_api(query):
+    appid = os.environ['WOLFRAMAPIKEY']
+    client = wolframalpha.Client(appid)
+    result = client.query(query)
+    return next(result.results).text
 
 async def get_top_result(query: str):
     url = (
@@ -73,7 +68,7 @@ async def get_urban_dictionary_results(query):
     return None, None
 
 async def fetch_results(query):
-    wolfram_response = await call_wolfram_api(query)
+    wolfram_response = call_wolfram_api(query)
     tasks = [
         get_top_result(query),
         get_urban_dictionary_results(query),
